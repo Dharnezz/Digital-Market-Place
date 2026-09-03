@@ -11,8 +11,9 @@ import NotFound from '../pages/NotFound'
 import Unauthorized from '../pages/Unauthorized'
 import Forbidden from '../pages/Forbidden'
 import SellerDashboard from '../pages/SellerDashboard'
+import SellerProductsPage from '../pages/SellerProductsPage'
+import ProductFormPage from '../pages/ProductFormPage'
 import DashboardLayout from '../components/layout/DashboardLayout'
-import ModulePlaceholder from '../components/ui/ModulePlaceholder'
 
 const AUTHENTICATED_ROLES = ['USER', 'SELLER', 'ADMIN']
 
@@ -53,14 +54,9 @@ export default function AppRoutes() {
         }
       >
         <Route index element={<SellerDashboard />} />
-        <Route
-          path="my-products"
-          element={<ModulePlaceholder title="My Products" nextModule="Product Management" />}
-        />
-        <Route
-          path="create-product"
-          element={<ModulePlaceholder title="Create Product" nextModule="Product Form" />}
-        />
+        <Route path="my-products" element={<SellerProductsPage />} />
+        <Route path="my-products/:productId/edit" element={<ProductFormPage />} />
+        <Route path="create-product" element={<ProductFormPage />} />
       </Route>
     </Routes>
   )

@@ -1,5 +1,5 @@
 import { formatPrice, formatDate } from '../../utils/format'
-import StatusBadge from './StatusBadge'
+import StatusBadge from '../ui/StatusBadge'
 
 export default function ProductRow({ product }) {
   return (
