@@ -12,6 +12,15 @@ export function getSellerProducts(sellerId) {
   return api.get(`/api/sellers/${sellerId}/products`).then((response) => response.data)
 }
 
+export async function findOwnedProduct(sellerId, productId) {
+  // TEMP SOLUTION: GET /api/products/{id} returns APPROVED products only, and the backend
+  // has no authenticated endpoint to fetch a DRAFT/PENDING_APPROVAL/REJECTED product by id.
+  // Resolve the product by loading the seller's owned list and matching the id client-side.
+  // Replace with a direct product lookup when such an endpoint exists.
+  const products = await getSellerProducts(sellerId)
+  return products.find((item) => String(item.id) === String(productId)) ?? null
+}
+
 export function createProduct(payload) {
   return api.post('/api/products', payload).then((response) => response.data)
 }

@@ -1,14 +1,28 @@
 import { useState } from 'react'
 import ErrorState from '../ui/ErrorState'
+import { validateProduct } from './validateProduct'
 
 const inputClassName =
   'mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500'
 
-function FieldError({ message }) {
-  return message ? <p className="mt-1 text-xs text-red-600">{message}</p> : null
+function FieldError({ id, message }) {
+  return message ? (
+    <p id={id} className="mt-1 text-xs text-red-600">
+      {message}
+    </p>
+  ) : null
 }
 
-export default function ProductForm({ categories, initialValues, mode, onSubmit, submitting, error }) {
+export default function ProductForm({
+  categories,
+  initialValues,
+  mode,
+  onSubmit,
+  onSaveAndSubmit,
+  busy,
+  error,
+  canSaveAndSubmit = false,
+}) {
   const [title, setTitle] = useState(initialValues?.title ?? '')
   const [categoryId, setCategoryId] = useState(initialValues?.categoryId ?? '')
   const [description, setDescription] = useState(initialValues?.description ?? '')
@@ -16,41 +30,31 @@ export default function ProductForm({ categories, initialValues, mode, onSubmit,
   const [validationErrors, setValidationErrors] = useState({})
 
   const isEdit = mode === 'edit'
-  const submitLabel = isEdit ? (submitting ? 'Saving…' : 'Save Changes') : submitting ? 'Creating…' : 'Create Product'
+  const isBusy = Boolean(busy)
 
-  const validate = () => {
-    const errors = {}
-    const trimmedTitle = title.trim()
-    if (!trimmedTitle) {
-      errors.title = 'Title is required'
-    } else if (trimmedTitle.length > 200) {
-      errors.title = 'Title must be at most 200 characters'
-    }
-    if (!categoryId) {
-      errors.categoryId = 'Category is required'
-    }
-    const numericPrice = Number(price)
-    if (price === '' || price === null) {
-      errors.price = 'Price is required'
-    } else if (Number.isNaN(numericPrice) || numericPrice < 0) {
-      errors.price = 'Price must not be negative'
-    }
-    return errors
-  }
+  const primaryLabel = isEdit
+    ? busy === 'save'
+      ? 'Saving…'
+      : 'Save Changes'
+    : busy === 'save'
+      ? 'Creating…'
+      : 'Create Product'
 
-  const handleSubmit = (e) => {
-    e.preventDefault()
-    const errors = validate()
+  const handleSubmit = (event, flow = 'save') => {
+    event.preventDefault()
+    if (isBusy) {
+      return
+    }
+    const { errors, values } = validateProduct({ title, categoryId, description, price })
     setValidationErrors(errors)
     if (Object.keys(errors).length > 0) {
       return
     }
-    onSubmit({
-      title: title.trim(),
-      categoryId: Number(categoryId),
-      description: description.trim(),
-      price: Number(price),
-    })
+    if (flow === 'approval' && onSaveAndSubmit) {
+      onSaveAndSubmit(values)
+    } else {
+      onSubmit(values)
+    }
   }
 
   return (
@@ -68,9 +72,11 @@ export default function ProductForm({ categories, initialValues, mode, onSubmit,
           maxLength={200}
           value={title}
           onChange={(e) => setTitle(e.target.value)}
+          aria-invalid={Boolean(validationErrors.title)}
+          aria-describedby={validationErrors.title ? 'title-error' : undefined}
           className={inputClassName}
         />
-        <FieldError message={validationErrors.title} />
+        <FieldError id="title-error" message={validationErrors.title} />
       </div>
 
       <div>
@@ -82,6 +88,8 @@ export default function ProductForm({ categories, initialValues, mode, onSubmit,
           required
           value={categoryId}
           onChange={(e) => setCategoryId(e.target.value)}
+          aria-invalid={Boolean(validationErrors.categoryId)}
+          aria-describedby={validationErrors.categoryId ? 'categoryId-error' : undefined}
           className={`${inputClassName} bg-white`}
         >
           <option value="" disabled>
@@ -93,7 +101,7 @@ export default function ProductForm({ categories, initialValues, mode, onSubmit,
             </option>
           ))}
         </select>
-        <FieldError message={validationErrors.categoryId} />
+        <FieldError id="categoryId-error" message={validationErrors.categoryId} />
       </div>
 
       <div>
@@ -108,9 +116,11 @@ export default function ProductForm({ categories, initialValues, mode, onSubmit,
           step="0.01"
           value={price}
           onChange={(e) => setPrice(e.target.value)}
+          aria-invalid={Boolean(validationErrors.price)}
+          aria-describedby={validationErrors.price ? 'price-error' : undefined}
           className={inputClassName}
         />
-        <FieldError message={validationErrors.price} />
+        <FieldError id="price-error" message={validationErrors.price} />
       </div>
 
       <div>
@@ -128,13 +138,33 @@ export default function ProductForm({ categories, initialValues, mode, onSubmit,
         <p className="mt-1 text-xs text-gray-400">Optional. Provide details about your digital product.</p>
       </div>
 
-      <button
-        type="submit"
-        disabled={submitting}
-        className="w-full rounded-md bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-60"
-      >
-        {submitLabel}
-      </button>
+      {canSaveAndSubmit ? (
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <button
+            type="button"
+            disabled={isBusy}
+            onClick={(event) => handleSubmit(event, 'approval')}
+            className="w-full rounded-md bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-60 sm:w-auto"
+          >
+            {busy === 'approval' ? 'Saving & submitting…' : 'Save & Submit for Approval'}
+          </button>
+          <button
+            type="submit"
+            disabled={isBusy}
+            className="w-full rounded-md border border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-60 sm:w-auto"
+          >
+            {isEdit ? 'Save Changes' : 'Create Product'}
+          </button>
+        </div>
+      ) : (
+        <button
+          type="submit"
+          disabled={isBusy}
+          className="w-full rounded-md bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-60"
+        >
+          {primaryLabel}
+        </button>
+      )}
     </form>
   )
 }

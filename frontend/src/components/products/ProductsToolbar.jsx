@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import ProductStatusFilter from './ProductStatusFilter'
 
-export default function ProductsToolbar({ activeStatus, onStatusChange }) {
+export default function ProductsToolbar({ activeStatus, onStatusChange, counts }) {
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -33,7 +33,7 @@ export default function ProductsToolbar({ activeStatus, onStatusChange }) {
       </div>
 
       <div className="mt-4">
-        <ProductStatusFilter active={activeStatus} onChange={onStatusChange} />
+        <ProductStatusFilter active={activeStatus} onChange={onStatusChange} counts={counts} />
       </div>
     </div>
   )

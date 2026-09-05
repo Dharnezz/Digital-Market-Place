@@ -10,7 +10,7 @@ export const STATUS_OPTIONS = [
 export const statusLabel = (status) =>
   STATUS_OPTIONS.find((option) => option.value === status)?.label ?? status
 
-export default function ProductStatusFilter({ active, onChange }) {
+export default function ProductStatusFilter({ active, onChange, counts }) {
   return (
     <div
       className="flex gap-2 overflow-x-auto pb-1"
@@ -19,6 +19,7 @@ export default function ProductStatusFilter({ active, onChange }) {
     >
       {STATUS_OPTIONS.map((option) => {
         const isActive = option.value === active
+        const count = counts?.[option.value]
         return (
           <button
             key={option.value}
@@ -33,6 +34,15 @@ export default function ProductStatusFilter({ active, onChange }) {
             }`}
           >
             {option.label}
+            {typeof count === 'number' ? (
+              <span
+                className={`ml-1.5 rounded-full px-1.5 py-0.5 text-xs ${
+                  isActive ? 'bg-white/20' : 'bg-gray-100 text-gray-500'
+                }`}
+              >
+                {count}
+              </span>
+            ) : null}
           </button>
         )
       })}

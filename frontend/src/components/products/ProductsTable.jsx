@@ -1,6 +1,6 @@
 import ProductManagementRow from './ProductManagementRow'
 
-export default function ProductsTable({ products, busyId, onEdit, onSubmitForApproval, onArchive }) {
+export default function ProductsTable({ products, busy, onEdit, onSubmitForApproval, onArchive }) {
   return (
     <section className="mt-6">
       <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
@@ -29,16 +29,20 @@ export default function ProductsTable({ products, busyId, onEdit, onSubmitForApp
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 bg-white">
-              {products.map((product) => (
-                <ProductManagementRow
-                  key={product.id}
-                  product={product}
-                  busy={busyId === product.id}
-                  onEdit={onEdit}
-                  onSubmitForApproval={onSubmitForApproval}
-                  onArchive={onArchive}
-                />
-              ))}
+              {products.map((product) => {
+                const rowBusy = busy?.id === product.id
+                return (
+                  <ProductManagementRow
+                    key={product.id}
+                    product={product}
+                    busy={rowBusy}
+                    busyAction={rowBusy ? busy.action : null}
+                    onEdit={onEdit}
+                    onSubmitForApproval={onSubmitForApproval}
+                    onArchive={onArchive}
+                  />
+                )
+              })}
             </tbody>
           </table>
         </div>
