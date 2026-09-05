@@ -43,7 +43,7 @@ grants access on its own.
 - ✅ Phase 1 — backend foundation (domain, repositories, services, REST API, JWT security, 138 tests)
 - ✅ Sprint 1 · Task 1 — Seller Dashboard (frontend)
 - ✅ Sprint 1 · Task 2 — Seller Product Management (frontend: list / filter / create / edit / submit / archive)
-- ⏳ Sprint 1 · Task 3 — pending (content defined in sprint planning)
+- ✅ Sprint 1 · Task 3 — Product Lifecycle completion (frontend: pending read-only, Save & Submit, confirm dialog, live status counts, contextual errors)
 - ⏳ Buyer UI flows (cart / checkout / payment / library / download) — backend demo-ready, UI not yet built
 
 ---
@@ -361,6 +361,8 @@ and `git rev-list --count origin/main..HEAD` before/after committing.
 ### Verified commit timeline (newest → oldest)
 | Hash | Date | Message |
 |---|---|---|
+| `a36be1b` | 2026-09-05 12:00 +0530 | `feat(seller): complete product lifecycle` |
+| `fe48459` | 2026-09-04 12:00 +0530 | `docs: add PROJECT_CONTEXT.md repository handbook` |
 | `719390a` | 2026-09-03 19:30 +0530 | `feat(seller): implement product management` |
 | `a942787` | 2026-09-01 12:00 +0530 | `feat(seller): implement Seller Dashboard` |
 | `75efa70` | 2026-08-10 19:54 +0530 | `feat: implement JWT security` |
@@ -378,15 +380,16 @@ and `git rev-list --count origin/main..HEAD` before/after committing.
 - **Phase 0:** requirements + ER / class / schema docs (2026-08-03 → 2026-08-09).
 - **Phase 1 (backend foundation):** scaffold → domain model → repositories → services → REST API →
   JWT security (2026-08-09 → 2026-08-10).
-- **Sprint 1:** Seller Dashboard (2026-09-01), Product Management (2026-09-03).
+- **Sprint 1:** Seller Dashboard (2026-09-01), Product Management (2026-09-03), Product Lifecycle (2026-09-05).
 
 ### Conventions
 `type(scope): subject` with types `feat`, `docs`, `chore`, `fix` and scopes such as `seller`,
 `database`. Commits are informational and pinned to sprint dates where requested.
 
 ### Current branch state
-- Branch `main`; HEAD `719390a`; working tree clean.
-- `origin/main` points at `75efa70` → commits `a942787` and `719390a` are **local-only** until pushed.
+- Branch `main`; HEAD `a36be1b`; working tree clean.
+- `origin/main` points at `75efa70` → commits `a942787`, `719390a`, `fe48459`, `a36be1b` are
+  **local-only** until pushed.
 
 ---
 
@@ -400,12 +403,16 @@ and `git rev-list --count origin/main..HEAD` before/after committing.
 - ✅ **Sprint 1 · Task 2**: Seller Product Management UI — list with status filter, create/edit form
   (client validation mirroring backend), submit-for-approval, archive-with-confirm; server-error
   banners; loading/empty/error states; edit lookup via owned-list (documented temp solution).
+- ✅ **Sprint 1 · Task 3**: Product Lifecycle completion — `ProductStatusMeta` as single source of
+  truth; PENDING_APPROVAL read-only (notice "This product is currently under review."); "Save &
+  Submit for Approval" for DRAFT/REJECTED; reusable `ConfirmDialog` (replaces `window.confirm`);
+  reusable `FlashMessage`; per-action error banners and live status counts; ARCHIVED/Pending URL
+  guards.
 
 ### Current branch status
-- `main`, HEAD `719390a`; working tree clean; 2 local commits ahead of `origin/main` (unpushed).
+- `main`, HEAD `a36be1b`; working tree clean; 4 local commits ahead of `origin/main` (unpushed).
 
 ### Pending work
-- Sprint 1 · Task 3 (per sprint planning).
 - Buyer-flow UI: cart, checkout, payment, orders, Digital Library, download, reviews.
 - Admin UI: product moderation, category management, monitoring.
 - Catalog search/filter/sort UI; pagination.
@@ -416,9 +423,9 @@ and `git rev-list --count origin/main..HEAD` before/after committing.
 
 ## 11. ROADMAP
 
-### Sprint 1 remaining
-- Sprint 1 · Task 3 — currently pending; scoped in sprint planning (do not invent details).
-- Architecture + QA review sign-off for Tasks 1–2 before building further.
+### Sprint 1 (delivered)
+- ✅ Task 1 — Seller Dashboard; ✅ Task 2 — Product Management; ✅ Task 3 — Product Lifecycle.
+- Architecture + QA review sign-off for the sprint still pending before building further.
 
 ### Future sprints
 - Seller order/transaction monitoring dashboard.
