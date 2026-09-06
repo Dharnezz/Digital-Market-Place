@@ -58,7 +58,7 @@ export default function ProductForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mt-6 space-y-4 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+    <form onSubmit={handleSubmit} noValidate className="mt-6 space-y-4 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
       {error ? <ErrorState message={error} /> : null}
 
       <div>

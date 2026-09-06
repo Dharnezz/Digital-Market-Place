@@ -11,6 +11,7 @@ export default function ConfirmDialog({
   onCancel,
 }) {
   const confirmButtonRef = useRef(null)
+  const dialogRef = useRef(null)
 
   useEffect(() => {
     if (!open) {
@@ -32,6 +33,30 @@ export default function ConfirmDialog({
     const handleKeyDown = (event) => {
       if (event.key === 'Escape') {
         onCancel()
+        return
+      }
+      if (event.key !== 'Tab') {
+        return
+      }
+      const container = dialogRef.current
+      if (!container) {
+        return
+      }
+      const focusables = container.querySelectorAll(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+      )
+      if (focusables.length === 0) {
+        return
+      }
+      const first = focusables[0]
+      const last = focusables[focusables.length - 1]
+      const active = document.activeElement
+      if (event.shiftKey && active === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault()
+        first.focus()
       }
     }
     document.addEventListener('keydown', handleKeyDown)
@@ -54,6 +79,7 @@ export default function ConfirmDialog({
       onClick={onCancel}
     >
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="confirm-dialog-title"
