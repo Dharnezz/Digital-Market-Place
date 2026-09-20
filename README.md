@@ -122,7 +122,7 @@ cannot reach admin endpoints; sellers can only manage their own products.
 │       │   ├── security/           # JWT service, filter, UserPrincipal
 │       │   └── service/            # Business logic + payment abstraction
 │       └── src/main/resources/     # application.yml
-│       └── src/test/               # 146 JUnit 5 tests
+│       └── src/test/               # 149 JUnit 5 tests
 ├── frontend/                       # React SPA
 │   └── src/
 │       ├── components/             # Reusable UI (Navbar, ProductCard, ui/)
@@ -233,7 +233,7 @@ Requirements: **Java 17+**, **Maven**, and a **PostgreSQL 15+** instance.
 3. **Build & run:**
    ```bash
    cd backend
-   ./mvnw.cmd test                 # run the 146 JUnit 5 tests
+   ./mvnw.cmd test                 # run the 149 JUnit 5 tests
    ./mvnw.cmd spring-boot:run      # start the API on http://localhost:8080
    ```
 
@@ -262,7 +262,7 @@ The dev server proxies `/api` → `http://localhost:8090`, so no CORS configurat
 
 ## Testing
 
-- **Backend:** 146 tests via JUnit 5 — entity/repository structure contracts, service unit tests,
+- **Backend:** 149 tests via JUnit 5 — entity/repository structure contracts, service unit tests,
   `@WebMvcTest` controller slice tests (MockMvc + mocked services), JWT unit tests, and a full
   `@SpringBootTest` `ApiFlowIntegrationTest` covering the entire buyer journey
   (register → login → browse → cart → checkout → pay → library → download → review) plus 401/403
@@ -311,7 +311,7 @@ returned as RFC 7807 `ProblemDetail` JSON.
 Review II is implemented across all three portals:
 
 - ✅ **Backend** — 11 entities, 11 repositories, 8 services, 11 controllers, JWT security,
-  validation, RFC 7807 errors, guarded product lifecycle, **146 tests passing**, Swagger docs.
+  validation, RFC 7807 errors, guarded product lifecycle, **149 tests passing**, Swagger docs.
 - ✅ **Seller Portal** — dashboard, product management (create / edit / submit / archive), full
   product lifecycle UI with status-aware read-only/guards.
 - ✅ **Buyer Portal** — catalog search & sort, cart, checkout, payment, orders, order details,

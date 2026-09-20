@@ -40,7 +40,7 @@ grants access on its own.
 
 ### Current development stage
 - ✅ Phase 0 — requirements & design docs (`Problem_Statement.md`, `docs/diagrams/`, `docs/database/`)
-- ✅ Phase 1 — backend foundation (domain, repositories, services, REST API, JWT security, 146 tests)
+- ✅ Phase 1 — backend foundation (domain, repositories, services, REST API, JWT security, 149 tests)
 - ✅ Sprint 1 · Task 1 — Seller Dashboard (frontend)
 - ✅ Sprint 1 · Task 2 — Seller Product Management (frontend: list / filter / create / edit / submit / archive)
 - ✅ Sprint 1 · Task 3 — Product Lifecycle completion (frontend: pending read-only, Save & Submit, confirm dialog, live status counts, contextual errors)
@@ -59,7 +59,7 @@ grants access on its own.
 | Authentication | Spring Security, stateless JWT (JJWT `0.12.6`, HS256), BCrypt password hashing |
 | Validation | Jakarta Bean Validation on request DTOs |
 | API docs | springdoc-openapi 2.8.6 — Swagger UI at `/swagger-ui.html`, JSON at `/v3/api-docs` |
-| Backend testing | JUnit 5, Mockito, `@WebMvcTest` (MockMvc), `@SpringBootTest` — **146 tests** |
+| Backend testing | JUnit 5, Mockito, `@WebMvcTest` (MockMvc), `@SpringBootTest` — **149 tests** |
 | Frontend testing | Production build only (`npm run build`) — no unit/e2e suite yet |
 | CI | GitHub Actions (`.github/workflows/ci.yml`): backend compile+test, frontend install+build; JDK 17 / Node 26 |
 | Containerization | Docker images (`backend/Dockerfile`, `frontend/Dockerfile`), `docker-compose.yml`, Render blueprint (`render.yaml`), Vercel config (`vercel.json`), nginx SPA proxy |
@@ -154,7 +154,7 @@ React SPA (Vercel)  →  HTTPS/JSON + Bearer JWT  →  Spring Boot REST (Render)
 │       │   └── service/        # 8 business services (+ service/payment abstraction)
 │       ├── main/resources/application.yml
 │       └── test/resources/application.yml   # test-profile config (demo data disabled)
-│   └── src/test/               # 146 JUnit 5 tests
+│   └── src/test/               # 149 JUnit 5 tests
 ├── frontend/                   # React SPA
 │   ├── Dockerfile              # Vite build → nginx; optional VITE_API_URL build arg
 │   ├── nginx.conf              # SPA fallback + /api proxy to backend:8080
@@ -364,7 +364,7 @@ authenticated product lookup exists.
 - Follow repo conventions (§12) and never redesign approved architecture.
 
 ### Verification process (mandatory before commit)
-Backend:: `./mvnw.cmd test` → **146 tests, 0 failures**.
+Backend:: `./mvnw.cmd test` → **149 tests, 0 failures**.
 Frontend:: `npm.cmd run build` → production bundle without errors (`npm.cmd`, see environment notes).
 Live smoke test:: exercise the real API on the running backend (login demo seller → create → list →
 update → submit → archive) and confirm response shapes match the frontend services.
@@ -431,7 +431,7 @@ and `git rev-list --count origin/main..HEAD` before/after committing.
 ### Completed
 - ✅ **Phase 0**: `Problem_Statement.md`, system architecture, ER diagram, class diagram, physical schema.
 - ✅ **Phase 1**: full backend — 11 entities, 11 repos, 8 services, 11 controllers, JWT security,
-  validation, RFC 7807 errors, Swagger docs, **146 tests passing**, CI workflow.
+  validation, RFC 7807 errors, Swagger docs, **149 tests passing**, CI workflow.
 - ✅ **Sprint 1 · Task 1**: Seller Dashboard UI (statistics cards, recent products, quick actions).
 - ✅ **Sprint 1 · Task 2**: Seller Product Management UI — list with status filter, create/edit form
   (client validation mirroring backend), submit-for-approval, archive-with-confirm; server-error
@@ -564,7 +564,7 @@ and `git rev-list --count origin/main..HEAD` before/after committing.
   verification report and stop after each task.
 
 ### Quality policy
-- `./mvnw.cmd test` → 146/146 green; `npm.cmd run build` → clean bundle; live API smoke tests on the
+- `./mvnw.cmd test` → 149/149 green; `npm.cmd run build` → clean bundle; live API smoke tests on the
   running backend before committing frontend service changes.
 
 ---
@@ -576,7 +576,7 @@ How any future OpenCode session should work on this project:
 1. **Read `PROJECT_CONTEXT.md` first** (plus `docs/` and `README.md` for depth) before any task or proposal.
 2. **Never redesign approved architecture** — extend within it; propose changes as new plans.
 3. **Build one task at a time** — plan first, get approval, then implement that task only.
-4. **Verify before committing** — `./mvnw.cmd test` (146), `npm.cmd run build`, live API smoke test, static checks.
+4. **Verify before committing** — `./mvnw.cmd test` (149), `npm.cmd run build`, live API smoke test, static checks.
 5. **Never push without approval** — confirm `@{upstream}` and local-ahead count; state it in the report.
 6. **Reuse existing components and services** wherever possible; never add dependencies without approval.
 7. **Follow the established Sprint workflow** — plan → build → verify → report → commit (on approval) → stop.

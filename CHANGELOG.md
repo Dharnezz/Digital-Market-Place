@@ -22,6 +22,7 @@ informational (capstone project); releases are tracked per milestone phase.
   - `frontend/nginx.conf` (SPA fallback + `/api` proxy)
   - Actuator health endpoint + environment-driven configuration (`DB_*`, `JWT_SECRET`, `PORT`, `CORS_ALLOWED_ORIGINS`, `APP_DEMO_DATA_ENABLED`)
 - **CORS**: `PATCH` allowed in preflight (needed for seller submit).
+- **`DataSourceUrlConfig`**: when `DATABASE_URL` is set, platform-provided `postgres://...` / `postgresql://...` connection strings are converted to `jdbc:postgresql://...` and credentials are taken from the URL when `DB_USERNAME`/`DB_PASSWORD` are unset. Local development (no `DATABASE_URL`) is unchanged.
 
 ### Changed
 - **`frontend/nginx.conf`**: backend proxy fixed from `:8090` → `:8080` (container port).
@@ -31,7 +32,7 @@ informational (capstone project); releases are tracked per milestone phase.
 - **`SecurityConfig`**: CORS allowed methods now include `PATCH`.
 
 ### Tests
-- Backend suite now **146 tests** (up from 138): guards for illegal product-status transitions covered by unit tests.
+- Backend suite now **149 tests** (up from 138): guards for illegal product-status transitions covered by unit tests.
 
 ---
 
