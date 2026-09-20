@@ -83,6 +83,12 @@
             <version>${springdoc.version}</version>
         </dependency>
 
+        <!-- Production readiness: health checks for cloud platforms (Render, Docker) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
         <!-- Testing -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

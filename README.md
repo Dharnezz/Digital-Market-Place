@@ -38,8 +38,9 @@ requires controlled access after a successful purchase. This marketplace solves 
 - Role-based authorization: **USER**, **SELLER**, **ADMIN** (`@PreAuthorize`)
 - 401 / 403 JSON responses for missing, invalid, or unauthorized requests
 
-### Product Catalog (public)
+### Product Catalog
 - Approved products list (`GET /api/products`), optional category filter
+- Search (by title / seller / category) and sort (date, price, name) via the catalog toolbar
 - Product details for approved products
 - Seller product listings (public, all statuses)
 - Category listing
@@ -49,19 +50,21 @@ requires controlled access after a successful purchase. This marketplace solves 
 - Update / archive own products only (server-side ownership checks)
 - Submit products for admin approval (`PENDING_APPROVAL`)
 
-### Admin Moderation
-- List pending products
-- Approve / reject products
+### Admin Moderation (UI)
+- Moderation queue: pending-product table + detail panel, counts, refresh
+- Approve / reject products (reject requires confirmation)
 
-### Buying (backend API; Swagger-demonstrable)
-- Cart: add / update / remove items, view cart (USER only)
+### Buying (full buyer portal UI)
+- Cart: add / update / remove items, quantity controls, view cart (USER only)
 - Checkout: creates a `PENDING` order and clears the cart
 - Payment: mock provider (`MOCK-<uuid>`), transitions order to `PAID`/`FAILED`
-- Digital Library: list purchased products
+- Orders: order history list + order detail with "pay now" for pending orders
+- Digital Library: purchased-product list (USER only)
 - Download authorization: returns file metadata only after entitlement is verified
 
-### Reviews
+### Reviews (UI)
 - Verified buyers can create / update / delete reviews (rating 1–5, one per product per user)
+- Reviews render inline on the product page, gated to verified purchasers
 - Public review listing per product
 
 ## Tech Stack
@@ -72,7 +75,7 @@ requires controlled access after a successful purchase. This marketplace solves 
 | Backend | Spring Boot 3.5, Java 17, Maven, Spring MVC |
 | Persistence | Spring Data JPA, Hibernate |
 | Security | Spring Security, JWT (JJWT 0.12), BCrypt |
-| Database | PostgreSQL 15 (local development and production) |
+| Database | PostgreSQL 17 (local Docker), 15 (production target) |
 | API docs | springdoc-openapi, Swagger UI |
 | Validation | Jakarta Bean Validation |
 | Testing | JUnit 5, Mockito, Spring Boot Test, MockMvc |
@@ -119,7 +122,7 @@ cannot reach admin endpoints; sellers can only manage their own products.
 │       │   ├── security/           # JWT service, filter, UserPrincipal
 │       │   └── service/            # Business logic + payment abstraction
 │       └── src/main/resources/     # application.yml
-│       └── src/test/               # 138 JUnit 5 tests
+│       └── src/test/               # 146 JUnit 5 tests
 ├── frontend/                       # React SPA
 │   └── src/
 │       ├── components/             # Reusable UI (Navbar, ProductCard, ui/)
@@ -143,7 +146,7 @@ cannot reach admin endpoints; sellers can only manage their own products.
   (DRAFT/PENDING_APPROVAL/APPROVED/REJECTED/ARCHIVED), `OrderStatus`
   (PENDING/PAID/FAILED/CANCELLED), `PaymentStatus` (PENDING/SUCCESS/FAILED)
 - **Repositories (11):** Spring Data JPA interfaces with derived query methods
-- **Services (7):** `UserService`, `CategoryService`, `ProductService`, `CartService`,
+- **Services (8):** `UserService`, `CategoryService`, `ProductService`, `CartService`,
   `OrderService`, `PaymentService`, `PurchaseEntitlementService`, `ReviewService`
 - **Controllers (11):** Auth, Home, Users, Categories, Products, Cart, Orders, Payments,
   Digital Library, Product Moderation, Reviews
@@ -154,6 +157,13 @@ A clean React SPA organized into `components/`, `layouts/`, `pages/`, `routes/`,
 `hooks/`, `context/`, and `utils/`. Routing uses React Router v7; authentication state lives in
 `AuthContext` and is persisted to `localStorage`. All API calls go through a central Axios client
 that attaches the JWT and handles 401/403 responses.
+
+Feature pages include the **buyer portal** (cart, checkout, order payment, orders, order details,
+digital library), the **seller portal** (dashboard, product management, product form) and
+**admin moderation**. Shared UI lives in `components/ui/`; feature components are grouped under
+`components/catalog/`, `components/reviews/`, `components/admin/`, `components/dashboard/` and
+`components/products/`. API access is split into one service module per domain (`auth`, `products`,
+`cart`, `orders`, `library`, `reviews`, `admin`, `categories`).
 
 ## JWT Authentication
 
@@ -166,7 +176,7 @@ that attaches the JWT and handles 401/403 responses.
 4. **Authorization** — `@PreAuthorize("hasRole('...')")` guards protected endpoints; missing or
    invalid tokens receive **401**, authenticated-but-forbidden requests receive **403**.
 5. **Frontend** — the JWT is stored in `localStorage`, attached by an Axios interceptor; a 401
-   response clears the session and redirects to login, a 403 redirects to the Forbidden page.
+   response clears the session and redirects to the Unauthorized page, a 403 redirects to the Forbidden page.
 
 No refresh tokens, no OAuth, no server-side sessions.
 
@@ -194,7 +204,7 @@ All values have safe local-development defaults.
 | Variable | Default | Description |
 |---|---|---|
 | `PORT` | `8080` | Backend server port |
-| `DATABASE_URL` | `jdbc:postgresql://127.0.4.7:5432/digitalmarketplace` | JDBC URL (PostgreSQL) |
+| `DATABASE_URL` | `jdbc:postgresql://127.0.0.1:5432/digitalmarketplace` | JDBC URL (PostgreSQL) |
 | `DATABASE_DRIVER` | `org.postgresql.Driver` | JDBC driver |
 | `DB_USERNAME` | `postgres` | Database username |
 | `DB_PASSWORD` | *(empty — set to your PostgreSQL password)* | Database password |
@@ -223,7 +233,7 @@ Requirements: **Java 17+**, **Maven**, and a **PostgreSQL 15+** instance.
 3. **Build & run:**
    ```bash
    cd backend
-   ./mvnw.cmd test                 # run the 138 JUnit 5 tests
+   ./mvnw.cmd test                 # run the 146 JUnit 5 tests
    ./mvnw.cmd spring-boot:run      # start the API on http://localhost:8080
    ```
 
@@ -237,7 +247,7 @@ should be disabled in production via `app.demo-data.enabled=false`).
 
 ## Frontend Setup
 
-Requirements: **Node.js 18+** (CI uses Node 26).
+Requirements: **Node.js 20.19+ / 22.12+** (CI runs Node 26; the Docker build image uses Node 20).
 
 ```bash
 cd frontend
@@ -246,17 +256,17 @@ npm run dev                     # Vite dev server on http://localhost:5173
 npm run build                   # production build
 ```
 
-The dev server proxies `/api` → `http://localhost:8080`, so no CORS configuration is needed and no
+The dev server proxies `/api` → `http://localhost:8090`, so no CORS configuration is needed and no
 `.env` file is required for local development. To point the frontend at a different backend, set
 `VITE_API_URL` (see `frontend/.env.example`).
 
 ## Testing
 
-- **Backend:** 138 tests via JUnit 5 — entity/repository structure contracts, service unit tests,
+- **Backend:** 146 tests via JUnit 5 — entity/repository structure contracts, service unit tests,
   `@WebMvcTest` controller slice tests (MockMvc + mocked services), JWT unit tests, and a full
   `@SpringBootTest` `ApiFlowIntegrationTest` covering the entire buyer journey
   (register → login → browse → cart → checkout → pay → library → download → review) plus 401/403
-  negative cases.
+  negative cases. Product lifecycle transitions are guarded server-side and covered by unit tests.
 - **Frontend:** `npm run build` produces a clean production bundle (no compile errors).
 
 ## API Overview
@@ -298,17 +308,40 @@ returned as RFC 7807 `ProblemDetail` JSON.
 
 ## Current Project Status
 
-Phase 1 (backend foundation) is **complete, verified, and pushed**:
+Review II is implemented across all three portals:
 
-- ✅ JPA domain model, repositories, services, REST API, and JWT security implemented
-- ✅ 138 backend tests passing; frontend builds cleanly
-- ✅ Swagger UI documented
-- ✅ Review-I MVP frontend (Home / Login / Register / Products / Product Details / 404 /
-  Unauthorized / Forbidden) wired to the backend API
-- ✅ Validation, exception handling, and role-based authorization in place
+- ✅ **Backend** — 11 entities, 11 repositories, 8 services, 11 controllers, JWT security,
+  validation, RFC 7807 errors, guarded product lifecycle, **146 tests passing**, Swagger docs.
+- ✅ **Seller Portal** — dashboard, product management (create / edit / submit / archive), full
+  product lifecycle UI with status-aware read-only/guards.
+- ✅ **Buyer Portal** — catalog search & sort, cart, checkout, payment, orders, order details,
+  digital library, download authorization, reviews.
+- ✅ **Admin Moderation** — pending-product queue with approve / reject.
+- ✅ **Deployment prep** — Docker images, docker-compose, Render blueprint, Vercel config, nginx
+  proxy, actuator health checks, environment-driven configuration.
 
-**Backend APIs for the full buying flow** (cart → checkout → payment → library → download) are
-implemented and demonstrable through Swagger UI.
+The full buying flow (cart → checkout → payment → library → download) is implemented end-to-end
+with a UI and demonstrable through the demo accounts.
+
+## Deployment
+
+The repository is deploy-ready with Docker and platform blueprints:
+
+- **Backend image** (`backend/Dockerfile`) — multi-stage Maven build → `eclipse-temurin:17-jre`,
+  exposes port 8080 (`PORT` env override), actuator `/actuator/health` health check.
+- **Frontend image** (`frontend/Dockerfile`) — Vite build → `nginx:1.27-alpine`, SPA fallback and
+  `/api/` proxy baked into `frontend/nginx.conf` (proxies to `http://backend:8080`). Optional
+  `VITE_API_URL` build arg for cross-origin deployments.
+- **`docker-compose.yml`** — `db` (PostgreSQL 17) + `backend` (`8090:8080`) + `frontend`
+  (`3000:80`), healthchecks wired, demo data disabled.
+- **`render.yaml`** — Render blueprint: managed PostgreSQL + Docker web service
+  (`rootDir: backend`, `dockerfilePath: ./Dockerfile`), env vars wired from the database,
+  `CORS_ALLOWED_ORIGINS` + `JWT_SECRET` set at deploy time, demo data disabled.
+- **`vercel.json`** — Vite framework + SPA rewrite for the frontend; set `VITE_API_URL` in the
+  Vercel dashboard to point at the hosted API.
+
+Production config is environment-driven (`DATABASE_URL`/`DB_*`, `JWT_SECRET`, `PORT`,
+`CORS_ALLOWED_ORIGINS`, `APP_DEMO_DATA_ENABLED`). No secrets are committed; `.env*` is ignored.
 
 ## Demo Credentials
 
@@ -326,11 +359,10 @@ manual setup.
 
 ## Future Improvements
 
-- Public catalog search, filtering, and sorting
 - Category management (admin)
-- Real digital file upload/storage behind the file abstraction
+- Seller order/transaction monitoring dashboard
+- Real digital file upload/object storage behind the file abstraction
 - Real payment provider integration behind the `PaymentProcessor` abstraction
-- Seller and admin dashboards, order/transaction monitoring UI
 - Pagination for large catalogs
-- Docker images and deployment (POST VI) / production PostgreSQL configuration
+- Production deployment (Vercel / Render / Aiven) and hardening
 - AI-assisted discovery and recommendations (post-MVP)

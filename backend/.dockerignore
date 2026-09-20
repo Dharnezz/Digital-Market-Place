@@ -1,0 +1,6 @@
+.git
+target/
+*.log
+build-test.log
+.env
+.env.*

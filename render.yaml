@@ -1,0 +1,46 @@
+databases:
+  - name: digital-marketplace-db
+    plan: free
+    databaseName: digitalmarketplace
+    user: marketplace
+    ipAllowList: []
+
+services:
+  - type: web
+    name: digital-marketplace-api
+    runtime: docker
+    repo: https://github.com/YOUR_GITHUB_USERNAME/digital-market-place
+    plan: free
+    region: oregon
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: DB_HOST
+        fromDatabase:
+          name: digital-marketplace-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: digital-marketplace-db
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: digital-marketplace-db
+          property: database
+      - key: DB_USERNAME
+        fromDatabase:
+          name: digital-marketplace-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: digital-marketplace-db
+          property: password
+      - key: CORS_ALLOWED_ORIGINS
+        value: "https://YOUR_FRONTEND.vercel.app"
+      - key: APP_DEMO_DATA_ENABLED
+        value: "false"
+      - key: JWT_SECRET
+        sync: false
+      - key: PORT
+        value: "8080"

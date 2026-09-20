@@ -79,6 +79,9 @@ public class ProductService {
     @Transactional
     public Product submitForApproval(Long sellerId, Long productId) {
         Product product = requireOwnedProduct(sellerId, productId);
+        if (product.getStatus() != ProductStatus.DRAFT && product.getStatus() != ProductStatus.REJECTED) {
+            throw new BusinessException("Only DRAFT or REJECTED products can be submitted for approval");
+        }
         product.setStatus(ProductStatus.PENDING_APPROVAL);
         return productRepository.save(product);
     }
@@ -86,6 +89,7 @@ public class ProductService {
     @Transactional
     public Product approveProduct(Long productId) {
         Product product = requireProduct(productId);
+        requirePendingApproval(product, "approved");
         product.setStatus(ProductStatus.APPROVED);
         return productRepository.save(product);
     }
@@ -93,6 +97,7 @@ public class ProductService {
     @Transactional
     public Product rejectProduct(Long productId) {
         Product product = requireProduct(productId);
+        requirePendingApproval(product, "rejected");
         product.setStatus(ProductStatus.REJECTED);
         return productRepository.save(product);
     }
@@ -126,6 +131,12 @@ public class ProductService {
             throw new BusinessException("Product is not available for purchase");
         }
         return product;
+    }
+
+    private void requirePendingApproval(Product product, String action) {
+        if (product.getStatus() != ProductStatus.PENDING_APPROVAL) {
+            throw new BusinessException("Only products pending approval can be " + action);
+        }
     }
 
     private Product requireOwnedProduct(Long sellerId, Long productId) {

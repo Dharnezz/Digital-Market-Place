@@ -25,11 +25,13 @@ export default function DashboardNavbar({ onToggleSidebar }) {
             </svg>
           </button>
 
-          <Link to="/seller" className="flex items-center gap-2">
+          <Link to={user?.role === 'ADMIN' ? '/admin' : '/seller'} className="flex items-center gap-2">
             <span className="flex h-8 w-8 items-center justify-center rounded-md bg-indigo-600 text-sm font-bold text-white">
               DM
             </span>
-            <span className="text-sm font-semibold text-gray-900 sm:text-base">Seller Dashboard</span>
+            <span className="text-sm font-semibold text-gray-900 sm:text-base">
+              {user?.role === 'ADMIN' ? 'Admin Portal' : 'Seller Dashboard'}
+            </span>
           </Link>
         </div>
 

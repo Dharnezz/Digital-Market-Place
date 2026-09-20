@@ -37,6 +37,19 @@ export default function Navbar() {
             <NavLink to="/products" className={navLinkClasses}>
               Products
             </NavLink>
+            {isAuthenticated && user?.role === 'USER' ? (
+              <>
+                <NavLink to="/cart" className={navLinkClasses}>
+                  Cart
+                </NavLink>
+                <NavLink to="/orders" className={navLinkClasses}>
+                  Orders
+                </NavLink>
+                <NavLink to="/library" className={navLinkClasses}>
+                  Library
+                </NavLink>
+              </>
+            ) : null}
           </div>
         </div>
 
@@ -97,6 +110,19 @@ export default function Navbar() {
             <NavLink to="/products" className={navLinkClasses} onClick={() => setOpen(false)}>
               Products
             </NavLink>
+            {isAuthenticated && user?.role === 'USER' ? (
+              <>
+                <NavLink to="/cart" className={navLinkClasses} onClick={() => setOpen(false)}>
+                  Cart
+                </NavLink>
+                <NavLink to="/orders" className={navLinkClasses} onClick={() => setOpen(false)}>
+                  Orders
+                </NavLink>
+                <NavLink to="/library" className={navLinkClasses} onClick={() => setOpen(false)}>
+                  Library
+                </NavLink>
+              </>
+            ) : null}
             {isAuthenticated ? (
               <>
                 <p className="px-3 py-2 text-sm text-gray-600">

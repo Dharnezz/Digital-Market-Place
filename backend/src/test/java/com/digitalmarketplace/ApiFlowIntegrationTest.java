@@ -51,7 +51,7 @@ class ApiFlowIntegrationTest {
     @Autowired
     private BCryptPasswordEncoder passwordEncoder;
 
-    private record Registered(long id, String email) {
+    private record Registered(String email) {
     }
 
     @Test
@@ -180,7 +180,7 @@ class ApiFlowIntegrationTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").exists())
                 .andReturn();
-        return new Registered(readId(result), email);
+        return new Registered(email);
     }
 
     private String login(String email, String password) throws Exception {

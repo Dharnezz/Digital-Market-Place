@@ -3,8 +3,14 @@ import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import ErrorState from '../components/ui/ErrorState'
 
+function roleHome(role) {
+  if (role === 'ADMIN') return '/admin'
+  if (role === 'SELLER') return '/seller'
+  return '/'
+}
+
 export default function Login() {
-  const { login, isAuthenticated } = useAuth()
+  const { login, isAuthenticated, user } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const [email, setEmail] = useState('')
@@ -13,7 +19,7 @@ export default function Login() {
   const [error, setError] = useState(null)
 
   if (isAuthenticated) {
-    return <Navigate to="/" replace />
+    return <Navigate to={roleHome(user?.role)} replace />
   }
 
   const handleSubmit = async (event) => {
@@ -21,8 +27,8 @@ export default function Login() {
     setError(null)
     setSubmitting(true)
     try {
-      await login(email.trim(), password)
-      const from = location.state?.from?.pathname || '/'
+      const loggedInUser = await login(email.trim(), password)
+      const from = location.state?.from?.pathname || roleHome(loggedInUser?.role)
       navigate(from, { replace: true })
     } catch (err) {
       setError(err.response?.data?.detail || 'Unable to log in. Please check your credentials.')

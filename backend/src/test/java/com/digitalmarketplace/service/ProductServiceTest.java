@@ -19,7 +19,6 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.AdditionalAnswers.returnsFirstArg;
 import static org.mockito.ArgumentMatchers.any;
@@ -171,6 +170,7 @@ class ProductServiceTest {
     @Test
     void approveProductSetsApproved() {
         Product product = ownedProduct();
+        product.setStatus(ProductStatus.PENDING_APPROVAL);
         when(productRepository.findById(1L)).thenReturn(Optional.of(product));
         when(productRepository.save(any(Product.class))).then(returnsFirstArg());
 
@@ -182,12 +182,88 @@ class ProductServiceTest {
     @Test
     void rejectProductSetsRejected() {
         Product product = ownedProduct();
+        product.setStatus(ProductStatus.PENDING_APPROVAL);
         when(productRepository.findById(1L)).thenReturn(Optional.of(product));
         when(productRepository.save(any(Product.class))).then(returnsFirstArg());
 
         productService.rejectProduct(1L);
 
         assertEquals(ProductStatus.REJECTED, product.getStatus());
+    }
+
+    @Test
+    void submitRejectsApprovedProduct() {
+        stubOwned(ProductStatus.APPROVED);
+
+        assertThrows(BusinessException.class, () -> productService.submitForApproval(9L, 1L));
+    }
+
+    @Test
+    void submitRejectsArchivedProduct() {
+        stubOwned(ProductStatus.ARCHIVED);
+
+        assertThrows(BusinessException.class, () -> productService.submitForApproval(9L, 1L));
+    }
+
+    @Test
+    void submitRejectsPendingProduct() {
+        stubOwned(ProductStatus.PENDING_APPROVAL);
+
+        assertThrows(BusinessException.class, () -> productService.submitForApproval(9L, 1L));
+    }
+
+    @Test
+    void submitFromRejectedIsAllowed() {
+        stubOwned(ProductStatus.REJECTED);
+        when(productRepository.save(any(Product.class))).then(returnsFirstArg());
+
+        Product result = productService.submitForApproval(9L, 1L);
+
+        assertEquals(ProductStatus.PENDING_APPROVAL, result.getStatus());
+    }
+
+    @Test
+    void approveRejectsDraftProduct() {
+        stubAny(ProductStatus.DRAFT);
+
+        assertThrows(BusinessException.class, () -> productService.approveProduct(1L));
+    }
+
+    @Test
+    void approveRejectsArchivedProduct() {
+        stubAny(ProductStatus.ARCHIVED);
+
+        assertThrows(BusinessException.class, () -> productService.approveProduct(1L));
+    }
+
+    @Test
+    void rejectRejectsDraftProduct() {
+        stubAny(ProductStatus.DRAFT);
+
+        assertThrows(BusinessException.class, () -> productService.rejectProduct(1L));
+    }
+
+    @Test
+    void rejectRejectsArchivedProduct() {
+        stubAny(ProductStatus.ARCHIVED);
+
+        assertThrows(BusinessException.class, () -> productService.rejectProduct(1L));
+    }
+
+    private void stubOwned(ProductStatus status) {
+        when(productRepository.findByIdAndSellerId(1L, 9L))
+                .thenReturn(Optional.of(productWithStatus(status)));
+    }
+
+    private void stubAny(ProductStatus status) {
+        when(productRepository.findById(1L))
+                .thenReturn(Optional.of(productWithStatus(status)));
+    }
+
+    private Product productWithStatus(ProductStatus status) {
+        Product product = ownedProduct();
+        product.setStatus(status);
+        return product;
     }
 
     @Test

@@ -40,11 +40,11 @@ grants access on its own.
 
 ### Current development stage
 - ✅ Phase 0 — requirements & design docs (`Problem_Statement.md`, `docs/diagrams/`, `docs/database/`)
-- ✅ Phase 1 — backend foundation (domain, repositories, services, REST API, JWT security, 138 tests)
+- ✅ Phase 1 — backend foundation (domain, repositories, services, REST API, JWT security, 146 tests)
 - ✅ Sprint 1 · Task 1 — Seller Dashboard (frontend)
 - ✅ Sprint 1 · Task 2 — Seller Product Management (frontend: list / filter / create / edit / submit / archive)
 - ✅ Sprint 1 · Task 3 — Product Lifecycle completion (frontend: pending read-only, Save & Submit, confirm dialog, live status counts, contextual errors)
-- ⏳ Buyer UI flows (cart / checkout / payment / library / download) — backend demo-ready, UI not yet built
+- ✅ Review II — Seller Portal, Buyer Portal (cart / checkout / payment / orders / order details / library / download / reviews), Admin Moderation, catalog search & sort, end-to-end product lifecycle guards, Docker + deployment prep
 
 ---
 
@@ -59,9 +59,10 @@ grants access on its own.
 | Authentication | Spring Security, stateless JWT (JJWT `0.12.6`, HS256), BCrypt password hashing |
 | Validation | Jakarta Bean Validation on request DTOs |
 | API docs | springdoc-openapi 2.8.6 — Swagger UI at `/swagger-ui.html`, JSON at `/v3/api-docs` |
-| Backend testing | JUnit 5, Mockito, `@WebMvcTest` (MockMvc), `@SpringBootTest` — **138 tests** |
+| Backend testing | JUnit 5, Mockito, `@WebMvcTest` (MockMvc), `@SpringBootTest` — **146 tests** |
 | Frontend testing | Production build only (`npm run build`) — no unit/e2e suite yet |
 | CI | GitHub Actions (`.github/workflows/ci.yml`): backend compile+test, frontend install+build; JDK 17 / Node 26 |
+| Containerization | Docker images (`backend/Dockerfile`, `frontend/Dockerfile`), `docker-compose.yml`, Render blueprint (`render.yaml`), Vercel config (`vercel.json`), nginx SPA proxy |
 | Development tools | Git/GitHub, Vite dev proxy, psql client (see §8 environment notes) |
 
 ---
@@ -133,8 +134,14 @@ React SPA (Vercel)  →  HTTPS/JSON + Bearer JWT  →  Spring Boot REST (Render)
 .
 ├── PROJECT_CONTEXT.md          # This handbook (start here)
 ├── README.md                   # Public project readme (setup, API table, credentials)
+├── CHANGELOG.md                # Release notes
 ├── Problem_Statement.md        # Capstone problem statement & chosen track
+├── docker-compose.yml          # Local stack: db + backend + frontend
+├── render.yaml                 # Render blueprint (Postgres + Docker web service)
 ├── backend/                    # Spring Boot REST API
+│   ├── Dockerfile              # Multi-stage Maven → Temurin 17 JRE
+│   ├── .dockerignore
+│   ├── .env.example            # Backend env template
 │   └── src/
 │       ├── main/java/com/digitalmarketplace/
 │       │   ├── config/         # SecurityConfig, AppConfig, DemoDataInitializer
@@ -147,14 +154,19 @@ React SPA (Vercel)  →  HTTPS/JSON + Bearer JWT  →  Spring Boot REST (Render)
 │       │   └── service/        # 8 business services (+ service/payment abstraction)
 │       ├── main/resources/application.yml
 │       └── test/resources/application.yml   # test-profile config (demo data disabled)
-│   └── src/test/               # 138 JUnit 5 tests
+│   └── src/test/               # 146 JUnit 5 tests
 ├── frontend/                   # React SPA
+│   ├── Dockerfile              # Vite build → nginx; optional VITE_API_URL build arg
+│   ├── nginx.conf              # SPA fallback + /api proxy to backend:8080
+│   ├── vercel.json
+│   ├── .dockerignore
+│   ├── .env.example
 │   └── src/
-│       ├── components/         # ui/ (shared), dashboard/, products/, layout/, auth/
-│       ├── layouts/            # RootLayout, DashboardLayout
-│       ├── pages/              # 11 pages (public, auth, seller)
+│       ├── components/         # ui/ (shared), dashboard/, products/, admin/, catalog/, reviews/, layout/, auth/
+│       ├── layouts/            # RootLayout (DashboardLayout lives in components/layout/)
+│       ├── pages/              # 18 pages (public, auth, seller, buyer, admin)
 │       ├── routes/             # AppRoutes + guards
-│       ├── services/           # api.js (Axios), auth.js, categories.js, products.js
+│       ├── services/           # api.js (Axios) + auth, products, categories, cart, orders, library, reviews, admin
 │       ├── context/            # AuthContext
 │       ├── hooks/              # useAuth
 │       ├── utils/              # storage.js, format.js
@@ -204,12 +216,12 @@ PostgreSQL, accessed via Spring Data JPA + Hibernate. Local dev machine runs a v
 - Product removal is modelled as **`ARCHIVED` status, not destructive delete**.
 
 ### Development database
-- URL `jdbc:postgresql://127.0.4.7:5432/digitalmarketplace` (also reachable at `127.0.0.1`),
+- URL `jdbc:postgresql://127.0.0.1:5432/digitalmarketplace` (default from `application.yml`),
   user `postgres`, password empty in local dev (overridable via `DB_USERNAME`/`DB_PASSWORD`).
 - `DemoDataInitializer` (idempotent, dev-only, gated by `app.demo-data.enabled`) seeds:
   - Users: `admin@demo.com`, `seller@demo.com`, `buyer@demo.com` — all password `DemoPass123!`
   - 5 categories: Ebooks, Software, Digital Templates, Design Assets, Courses
-  - 5 approved products for the demo seller (two with file metadata)
+  - 5 approved products for the demo seller (each with a metadata `ProductFile`)
 
 ### Production database
 - Aiven PostgreSQL 15, configured entirely via environment variables
@@ -266,10 +278,12 @@ payloads → 400 with ProblemDetail.
 
 ## 7. FRONTEND
 
-### Pages (11)
-- Public/auth: `Home`, `Login`, `Register`, `Products`, `ProductDetails`, `NotFound`,
-  `Unauthorized`, `Forbidden`
+### Pages (18)
+- Public/auth: `Home`, `Login`, `Register`, `NotFound`, `Unauthorized`, `Forbidden`
+- Catalog: `Products` (search + sort), `ProductDetails` (add-to-cart + reviews)
 - Seller: `SellerDashboard`, `SellerProductsPage`, `ProductFormPage` (create + edit)
+- Buyer: `CartPage`, `CheckoutPage`, `OrderPaymentPage`, `OrdersPage`, `OrderDetailsPage`, `LibraryPage`
+- Admin: `AdminModerationPage`
 
 ### Layouts
 - `RootLayout` — public shell with `Navbar`.
@@ -277,11 +291,14 @@ payloads → 400 with ProblemDetail.
 
 ### Components
 - `components/ui/` (shared, reusable): `StatusBadge`, `LoadingSpinner`, `LoadingSkeleton`,
-  `EmptyState`, `ErrorState`, `ModulePlaceholder` (reusable utility; currently unused by routes)
+  `EmptyState`, `ErrorState`, `ConfirmDialog`, `FlashMessage`, `ModulePlaceholder` (currently unused)
 - `components/dashboard/`: `DashboardHeader`, `StatisticsCards`, `StatisticCard`,
   `RecentProductsTable`, `ProductRow`, `QuickActionCard`
 - `components/products/`: `ProductsToolbar`, `ProductStatusFilter`, `ProductsTable`,
-  `ProductManagementRow`, `ProductForm`, `ProductCard`
+  `ProductManagementRow`, `ProductForm`, `ProductCard`, `ProductStatusMeta`
+- `components/catalog/`: `CatalogToolbar`, `catalogSort` (search + sort helpers)
+- `components/reviews/`: `RatingStars`, `ReviewForm`, `ReviewList`, `ReviewsSection`
+- `components/admin/`: `ModerationToolbar`, `PendingProductsTable`, `PendingProductRow`, `ModerationDetailsPanel`
 - `components/auth/`: `ProtectedRoute`, `RoleRoute`
 - `components/layout/`: `Navbar`, `Sidebar`, `DashboardNavbar`, `DashboardLayout`
 
@@ -295,12 +312,20 @@ dashboard and products both consume it).
 |---|---|---|
 | `/` | public | Home |
 | `/login`, `/register` | public | Login / Register |
-| `/products` | authenticated | Products |
+| `/products` | authenticated roles | Products (search + sort) |
 | `/products/:productId` | authenticated | ProductDetails |
+| `/cart` | `RoleRoute(USER)` | CartPage |
+| `/checkout` | USER | CheckoutPage |
+| `/orders` | USER | OrdersPage |
+| `/orders/:orderId` | USER | OrderDetailsPage |
+| `/orders/:orderId/pay` | USER | OrderPaymentPage |
+| `/library` | USER | LibraryPage |
 | `/seller` | `RoleRoute(SELLER)` `DashboardLayout` | index → SellerDashboard |
 | `/seller/my-products` | SELLER | SellerProductsPage |
 | `/seller/my-products/:productId/edit` | SELLER | ProductFormPage (edit) |
 | `/seller/create-product` | SELLER | ProductFormPage (create) |
+| `/admin` | `RoleRoute(ADMIN)` `DashboardLayout` | index → redirect to `/admin/moderation` |
+| `/admin/moderation` | ADMIN | AdminModerationPage |
 | `/unauthorized`, `/forbidden`, `*` | public | Unauthorized / Forbidden / NotFound |
 
 ### State management
@@ -311,14 +336,19 @@ dashboard and products both consume it).
 ### API services
 - `services/api.js` — shared Axios instance (base `VITE_API_URL` or `/api` via dev proxy); request
   interceptor attaches `Bearer` token; response interceptor handles 401 → `/unauthorized`,
-  403 → `/forbidden`.
-- `services/auth.js` — login/register; `services/categories.js` — `getCategories`;
-  `services/products.js` — list sellers' products, create/update/archive/submit, browse endpoints.
+  403 → `/forbidden` (auth + library endpoints excluded from the 403 redirect so download
+  denials render inline).
+- One module per domain: `auth.js` (register/login), `categories.js` (list),
+  `products.js` (catalog + seller CRUD/submit/archive), `cart.js`, `orders.js` (checkout/history/
+  detail/pay), `library.js` (purchased products + download authorization), `reviews.js`,
+  `admin.js` (pending list + approve/reject).
 - `utils/format.js` — currency/date formatting helpers.
 
-### Known gap (backend-only today)
-Cart, checkout, payment, orders, Digital Library, download, and reviews are implemented and
-Swagger-demonstrable on the backend but have **no frontend pages yet** (planned).
+### Known gap (driver of a temporary frontend workaround)
+The backend exposes no single-product endpoint that returns a seller's own non-APPROVED product by
+id, so `ProductFormPage` loads the seller's owned-product list and looks the product up client-side
+(`services/products.js` `findOwnedProduct`, documented TEMP solution) until a direct
+authenticated product lookup exists.
 
 ---
 
@@ -334,7 +364,7 @@ Swagger-demonstrable on the backend but have **no frontend pages yet** (planned)
 - Follow repo conventions (§12) and never redesign approved architecture.
 
 ### Verification process (mandatory before commit)
-Backend:: `./mvnw.cmd test` → **138 tests, 0 failures**.
+Backend:: `./mvnw.cmd test` → **146 tests, 0 failures**.
 Frontend:: `npm.cmd run build` → production bundle without errors (`npm.cmd`, see environment notes).
 Live smoke test:: exercise the real API on the running backend (login demo seller → create → list →
 update → submit → archive) and confirm response shapes match the frontend services.
@@ -361,6 +391,8 @@ and `git rev-list --count origin/main..HEAD` before/after committing.
 ### Verified commit timeline (newest → oldest)
 | Hash | Date | Message |
 |---|---|---|
+| `153ca71` | 2026-09-06 12:00 +0530 | `fix(seller): resolve QA findings on product lifecycle` |
+| `9ad1d1a` | 2026-09-05 12:00 +0530 | `docs: update PROJECT_CONTEXT with Sprint 1 completion` |
 | `a36be1b` | 2026-09-05 12:00 +0530 | `feat(seller): complete product lifecycle` |
 | `fe48459` | 2026-09-04 12:00 +0530 | `docs: add PROJECT_CONTEXT.md repository handbook` |
 | `719390a` | 2026-09-03 19:30 +0530 | `feat(seller): implement product management` |
@@ -380,16 +412,17 @@ and `git rev-list --count origin/main..HEAD` before/after committing.
 - **Phase 0:** requirements + ER / class / schema docs (2026-08-03 → 2026-08-09).
 - **Phase 1 (backend foundation):** scaffold → domain model → repositories → services → REST API →
   JWT security (2026-08-09 → 2026-08-10).
-- **Sprint 1:** Seller Dashboard (2026-09-01), Product Management (2026-09-03), Product Lifecycle (2026-09-05).
+- **Sprint 1:** Seller Dashboard (2026-09-01), Product Management (2026-09-03), Product Lifecycle (2026-09-05), QA fixes (2026-09-06).
+- **Review II (working tree, uncommitted):** Buyer Portal, Admin Moderation, catalog search & sort, product lifecycle guards, Docker + deployment prep.
 
 ### Conventions
 `type(scope): subject` with types `feat`, `docs`, `chore`, `fix` and scopes such as `seller`,
 `database`. Commits are informational and pinned to sprint dates where requested.
 
 ### Current branch state
-- Branch `main`; HEAD `a36be1b`; working tree clean.
-- `origin/main` points at `75efa70` → commits `a942787`, `719390a`, `fe48459`, `a36be1b` are
-  **local-only** until pushed.
+- Branch `main`; HEAD `153ca71` (`fix(seller): resolve QA findings on product lifecycle`).
+- Working tree contains the Review II feature set (buyer/admin/catalog UI, deployment files) that
+  is **uncommitted**; 6 commits ahead of `origin/main` (unpushed).
 
 ---
 
@@ -398,26 +431,35 @@ and `git rev-list --count origin/main..HEAD` before/after committing.
 ### Completed
 - ✅ **Phase 0**: `Problem_Statement.md`, system architecture, ER diagram, class diagram, physical schema.
 - ✅ **Phase 1**: full backend — 11 entities, 11 repos, 8 services, 11 controllers, JWT security,
-  validation, RFC 7807 errors, Swagger docs, **138 tests passing**, CI workflow.
+  validation, RFC 7807 errors, Swagger docs, **146 tests passing**, CI workflow.
 - ✅ **Sprint 1 · Task 1**: Seller Dashboard UI (statistics cards, recent products, quick actions).
 - ✅ **Sprint 1 · Task 2**: Seller Product Management UI — list with status filter, create/edit form
   (client validation mirroring backend), submit-for-approval, archive-with-confirm; server-error
   banners; loading/empty/error states; edit lookup via owned-list (documented temp solution).
 - ✅ **Sprint 1 · Task 3**: Product Lifecycle completion — `ProductStatusMeta` as single source of
   truth; PENDING_APPROVAL read-only (notice "This product is currently under review."); "Save &
-  Submit for Approval" for DRAFT/REJECTED; reusable `ConfirmDialog` (replaces `window.confirm`);
-  reusable `FlashMessage`; per-action error banners and live status counts; ARCHIVED/Pending URL
-  guards.
+  Submit for Approval" for DRAFT/REJECTED; reusable `ConfirmDialog`; reusable `FlashMessage`;
+  per-action error banners and live status counts; ARCHIVED/Pending URL guards.
+- ✅ **Review II — Seller Portal**: dashboard + product lifecycle UI, server-enforced status
+  transitions (submit only from DRAFT/REJECTED; approve/reject only from PENDING_APPROVAL).
+- ✅ **Review II — Buyer Portal**: catalog search + sort, cart, checkout, mock payment, orders &
+  order details, Digital Library, download authorization, product reviews.
+- ✅ **Review II — Admin Moderation**: pending queue, approve/reject with confirmation.
+- ✅ **Review II — Deployment prep**: backend/frontend Dockerfiles, `docker-compose.yml`,
+  `render.yaml` blueprint, `vercel.json`, nginx SPA proxy (`/api` → backend:8080), actuator health
+  checks, environment-driven configuration, `CORS` includes PATCH.
 
 ### Current branch status
-- `main`, HEAD `a36be1b`; working tree clean; 4 local commits ahead of `origin/main` (unpushed).
+- `main`, HEAD `153ca71`; Review II work sits in the working tree (**uncommitted**); 6 commits ahead
+  of `origin/main` (unpushed).
 
 ### Pending work
-- Buyer-flow UI: cart, checkout, payment, orders, Digital Library, download, reviews.
-- Admin UI: product moderation, category management, monitoring.
-- Catalog search/filter/sort UI; pagination.
-- Real file upload/storage and real payment provider (behind existing abstractions).
-- Deployment: Docker images, Vercel/Render/Aiven config, production env hardening.
+- Real file upload/object storage and real payment provider (behind existing abstractions).
+- Category management UI (admin); seller order/transaction monitoring dashboard.
+- Pagination for large catalogs.
+- Production deployment (Vercel / Render / Aiven) — fill `render.yaml` deploy-time placeholders
+  (repo URL, `CORS_ALLOWED_ORIGINS`), set `VITE_API_URL`, real `JWT_SECRET`.
+- Resolve the repo node/Docker version skew (Node 26 in CI vs Node 20 in Docker); non-root container users.
 
 ---
 
@@ -427,16 +469,25 @@ and `git rev-list --count origin/main..HEAD` before/after committing.
 - ✅ Task 1 — Seller Dashboard; ✅ Task 2 — Product Management; ✅ Task 3 — Product Lifecycle.
 - Architecture + QA review sign-off for the sprint still pending before building further.
 
+### Review II (delivered in working tree, uncommitted)
+- ✅ Buyer Portal (cart → checkout → payment → orders → library → download → reviews) with client-side catalog search & sort.
+- ✅ Admin Moderation UI (pending queue, approve/reject).
+- ✅ Product lifecycle guards enforced server-side in `ProductService` (+ unit tests).
+- ✅ Deployment prep: Dockerfiles, docker-compose, render.yaml, vercel.json, nginx proxy, health checks.
+- ⏳ Deploy-day TODOs: fill `render.yaml` repo URL + CORS origin, set `VITE_API_URL`, real `JWT_SECRET`, push + first deploy.
+
 ### Future sprints
 - Seller order/transaction monitoring dashboard.
-- Admin moderation + category management UI.
-- Buyer flows UI (cart → checkout → payment → library → download → review).
-- Public catalog search, filter, and sort; pagination for large catalogs.
+- Admin category management UI.
+- Real digital file upload/object storage behind the file abstraction.
+- Real payment gateway behind the `PaymentProcessor` abstraction.
+- Pagination for large catalogs.
+- Production deployment and hardening (Vercel / Render / Aiven).
 
 ### Long-term goals
 - Real digital file upload/object storage behind the file abstraction.
 - Real payment gateway behind the `PaymentProcessor` abstraction.
-- Docker images and production deployment (Vercel / Render / Aiven), hardened secrets (real `JWT_SECRET`).
+- Harden container images (non-root users, pinned base-image tags) and secrets.
 - AI-assisted discovery and recommendations (explicitly post-MVP).
 
 ---
@@ -473,7 +524,7 @@ and `git rev-list --count origin/main..HEAD` before/after committing.
 ### Error handling
 - Backend: structured RFC 7807 `ProblemDetail` (400/401/403/404/409/500).
 - Frontend: per-view `ErrorState` with retry for load failures; per-action error banners for
-  mutations (list stays rendered); `window.confirm` for destructive actions (archive).
+  mutations (list stays rendered); reusable `ConfirmDialog` for destructive actions (archive).
 
 ### Documentation expectations
 - Design / schema docs live in `docs/` and are kept consistent with code.
@@ -513,7 +564,7 @@ and `git rev-list --count origin/main..HEAD` before/after committing.
   verification report and stop after each task.
 
 ### Quality policy
-- `./mvnw.cmd test` → 138/138 green; `npm.cmd run build` → clean bundle; live API smoke tests on the
+- `./mvnw.cmd test` → 146/146 green; `npm.cmd run build` → clean bundle; live API smoke tests on the
   running backend before committing frontend service changes.
 
 ---
@@ -525,7 +576,7 @@ How any future OpenCode session should work on this project:
 1. **Read `PROJECT_CONTEXT.md` first** (plus `docs/` and `README.md` for depth) before any task or proposal.
 2. **Never redesign approved architecture** — extend within it; propose changes as new plans.
 3. **Build one task at a time** — plan first, get approval, then implement that task only.
-4. **Verify before committing** — `./mvnw.cmd test` (138), `npm.cmd run build`, live API smoke test, static checks.
+4. **Verify before committing** — `./mvnw.cmd test` (146), `npm.cmd run build`, live API smoke test, static checks.
 5. **Never push without approval** — confirm `@{upstream}` and local-ahead count; state it in the report.
 6. **Reuse existing components and services** wherever possible; never add dependencies without approval.
 7. **Follow the established Sprint workflow** — plan → build → verify → report → commit (on approval) → stop.

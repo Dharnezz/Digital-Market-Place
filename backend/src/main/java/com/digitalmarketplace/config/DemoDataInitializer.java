@@ -67,23 +67,28 @@ public class DemoDataInitializer implements CommandLineRunner {
 
         createApprovedProduct(seller, ebooks, "Spring Boot Essentials",
                 "A practical introduction to building REST APIs with Spring Boot.",
-                new BigDecimal("19.99"), "spring-boot-essentials.pdf", "application/pdf");
+                new BigDecimal("19.99"), "spring-boot-essentials.pdf", "application/pdf",
+                1_289_728L);
 
         createApprovedProduct(seller, designAssets, "Vector Logo Pack",
                 "A collection of editable vector logo assets for your next project.",
-                new BigDecimal("9.99"), "vector-logo-pack.zip", "application/zip");
+                new BigDecimal("9.99"), "vector-logo-pack.zip", "application/zip",
+                8_519_680L);
 
         createApprovedProduct(seller, templates, "Resume Template Kit",
                 "Modern resume templates that work with Word, Google Docs and PDF.",
-                new BigDecimal("14.99"), null, null);
+                new BigDecimal("14.99"), "resume-template-kit.zip", "application/zip",
+                4_096_000L);
 
         createApprovedProduct(seller, software, "Invoice Manager Pro",
                 "Desktop invoicing tool with PDF export and simple reporting.",
-                new BigDecimal("39.99"), null, null);
+                new BigDecimal("39.99"), "invoice-manager-pro.zip", "application/zip",
+                50_331_648L);
 
         createApprovedProduct(seller, courses, "Introduction to Digital Commerce",
                 "A beginner course covering the fundamentals of selling digital goods.",
-                new BigDecimal("49.99"), null, null);
+                new BigDecimal("49.99"), "introduction-to-digital-commerce.mp4", "video/mp4",
+                158_560_000L);
 
         log.info("Demo data seeded: {} (ADMIN), {} (SELLER), demo buyer, {} categories and {} approved products.",
                 admin.getEmail(), seller.getEmail(), categoryRepository.count(), productRepository.count());
@@ -113,7 +118,7 @@ public class DemoDataInitializer implements CommandLineRunner {
     }
 
     private Product createApprovedProduct(User seller, Category category, String title, String description,
-                                          BigDecimal price, String fileName, String fileType) {
+                                          BigDecimal price, String fileName, String fileType, long fileSize) {
         Product product = productRepository.findAll().stream()
                 .filter(existing -> title.equals(existing.getTitle()))
                 .findFirst()
@@ -137,7 +142,7 @@ public class DemoDataInitializer implements CommandLineRunner {
                 file.setFileName(fileName);
                 file.setStorageReference("demo/" + product.getId() + "-" + fileName);
                 file.setFileType(fileType);
-                file.setFileSize(1024L);
+                file.setFileSize(fileSize);
                 productFileRepository.save(file);
             }
         }

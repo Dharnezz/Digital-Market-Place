@@ -4,6 +4,10 @@ const STATUS_STYLES = {
   APPROVED: 'bg-emerald-100 text-emerald-700',
   REJECTED: 'bg-red-100 text-red-700',
   ARCHIVED: 'bg-gray-800 text-gray-100',
+  PENDING: 'bg-amber-100 text-amber-700',
+  PAID: 'bg-emerald-100 text-emerald-700',
+  FAILED: 'bg-red-100 text-red-700',
+  CANCELLED: 'bg-gray-200 text-gray-600',
 }
 
 const STATUS_LABELS = {
@@ -12,6 +16,10 @@ const STATUS_LABELS = {
   APPROVED: 'Approved',
   REJECTED: 'Rejected',
   ARCHIVED: 'Archived',
+  PENDING: 'Pending',
+  PAID: 'Paid',
+  FAILED: 'Failed',
+  CANCELLED: 'Cancelled',
 }
 
 const STATUS_DOTS = {
@@ -20,6 +28,10 @@ const STATUS_DOTS = {
   APPROVED: 'bg-emerald-500',
   REJECTED: 'bg-red-500',
   ARCHIVED: 'bg-gray-700',
+  PENDING: 'bg-amber-500',
+  PAID: 'bg-emerald-500',
+  FAILED: 'bg-red-500',
+  CANCELLED: 'bg-gray-400',
 }
 
 export default function StatusBadge({ status }) {
