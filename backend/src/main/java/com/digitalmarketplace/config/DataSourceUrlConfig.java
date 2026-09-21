@@ -1,11 +1,12 @@
 package com.digitalmarketplace.config;
 
+import java.net.URI;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 
 import javax.sql.DataSource;
 
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.boot.jdbc.DataSourceBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -16,88 +17,102 @@ import org.springframework.core.env.Environment;
  *
  * <p>Cloud platforms (Render, Railway, Heroku, ...) expose the connection string as
  * {@code postgres://user:pass@host:port/db} or {@code postgresql://...}, but the
- * PostgreSQL JDBC driver only accepts {@code jdbc:postgresql://...}. This class
- * activates only when {@code DATABASE_URL} is set, normalizes the scheme, and builds
- * the DataSource from it. Local development (no {@code DATABASE_URL}) is untouched
- * and keeps using the {@code spring.datasource.*} defaults in application.yml.
+ * PostgreSQL JDBC driver accepts only {@code jdbc:postgresql://...}. This class activates
+ * only when {@code DATABASE_URL} is set, parses it with {@link URI}, builds a JDBC URL
+ * that never contains credentials ({@code jdbc:postgresql://host:port/db}), and extracts
+ * username/password from the URI userinfo. Local development (no {@code DATABASE_URL}) is
+ * untouched and keeps using the {@code spring.datasource.*} defaults in application.yml.
  */
 @Configuration
-@ConditionalOnProperty(name = "DATABASE_URL")
+@ConditionalOnExpression("'${DATABASE_URL:}' != ''")
 public class DataSourceUrlConfig {
 
-    private static final String POSTGRES_SCHEME = "postgres://";
-    private static final String POSTGRESQL_SCHEME = "postgresql://";
-    private static final String JDBC_POSTGRESQL_SCHEME = "jdbc:postgresql://";
+    private static final String SCHEME_POSTGRES = "postgres";
+    private static final String SCHEME_POSTGRESQL = "postgresql";
+    private static final int DEFAULT_POSTGRES_PORT = 5432;
+    private static final String DEFAULT_DATABASE = "postgres";
 
     @Bean
     DataSource dataSource(Environment environment) {
-        String jdbcUrl = toJdbcUrl(environment.getProperty("DATABASE_URL"));
-        DataSourceBuilder<?> builder = DataSourceBuilder.create()
-                .driverClassName("org.postgresql.Driver")
-                .url(jdbcUrl);
-
-        UserInfo userInfo = userInfo(jdbcUrl);
+        ParsedDatabaseUrl parsed = parse(environment.getProperty("DATABASE_URL"));
         String username = environment.getProperty("DB_USERNAME");
         String password = environment.getProperty("DB_PASSWORD");
-
-        if (username == null && userInfo != null) {
-            username = userInfo.username();
+        if (username == null && parsed.username() != null) {
+            username = parsed.username();
         }
-        if (password == null && userInfo != null) {
-            password = userInfo.password();
+        if (password == null && parsed.password() != null) {
+            password = parsed.password();
         }
-        if (username == null) {
-            username = "postgres";
-        }
-        password = password == null ? "" : password;
-
-        return builder.username(username).password(password).build();
+        return DataSourceBuilder.create()
+                .driverClassName("org.postgresql.Driver")
+                .url(parsed.url())
+                .username(username == null ? "postgres" : username)
+                .password(password == null ? "" : password)
+                .build();
     }
 
     /**
-     * Converts a raw DATABASE_URL into a JDBC URL. {@code postgres://...} and
-     * {@code postgresql://...} become {@code jdbc:postgresql://...}. Any other value
-     * (including an already-valid JDBC URL) is returned unchanged.
+     * Parses a raw {@code DATABASE_URL} into the parts needed to build a DataSource.
+     *
+     * <p>{@code postgres://...} and {@code postgresql://...} produce a JDBC URL of the form
+     * {@code jdbc:postgresql://host:port/db} (credentials kept out of the URL) with the
+     * username/password extracted from the URI userinfo. Any other value is passed through
+     * unchanged. Returns {@code null} parts for blank or non-postgres input.
      */
-    static String toJdbcUrl(String databaseUrl) {
+    static ParsedDatabaseUrl parse(String databaseUrl) {
         if (databaseUrl == null || databaseUrl.isBlank()) {
-            return databaseUrl;
+            return new ParsedDatabaseUrl(null, null, null);
         }
-        String url = databaseUrl.trim();
-        if (url.startsWith(POSTGRES_SCHEME)) {
-            return JDBC_POSTGRESQL_SCHEME + url.substring(POSTGRES_SCHEME.length());
+        String value = databaseUrl.trim();
+        try {
+            URI uri = URI.create(value);
+            String scheme = uri.getScheme();
+            if ((SCHEME_POSTGRES.equals(scheme) || SCHEME_POSTGRESQL.equals(scheme)) && uri.getHost() != null) {
+                return new ParsedDatabaseUrl(
+                        "jdbc:postgresql://" + host(uri) + ":" + port(uri) + "/" + database(uri),
+                        username(uri),
+                        password(uri));
+            }
+        } catch (IllegalArgumentException ex) {
+            // Not a parseable URI; fall through to passthrough.
         }
-        if (url.startsWith(POSTGRESQL_SCHEME)) {
-            return JDBC_POSTGRESQL_SCHEME + url.substring(POSTGRESQL_SCHEME.length());
-        }
-        return url;
+        return new ParsedDatabaseUrl(value, null, null);
     }
 
-    /** Extracts {@code user[:password]} from the URL authority, decoding percent-encoding. */
-    private static UserInfo userInfo(String jdbcUrl) {
-        if (jdbcUrl == null) {
+    private static String host(URI uri) {
+        String host = uri.getHost();
+        return host.indexOf(':') >= 0 ? "[" + host + "]" : host;
+    }
+
+    private static int port(URI uri) {
+        int port = uri.getPort();
+        return port > 0 ? port : DEFAULT_POSTGRES_PORT;
+    }
+
+    private static String database(URI uri) {
+        String path = uri.getPath();
+        if (path == null || path.isBlank() || "/".equals(path)) {
+            return DEFAULT_DATABASE;
+        }
+        return path.startsWith("/") ? path.substring(1) : path;
+    }
+
+    private static String username(URI uri) {
+        String userInfo = uri.getUserInfo();
+        if (userInfo == null) {
             return null;
         }
-        int schemeEnd = jdbcUrl.indexOf("://");
-        if (schemeEnd < 0) {
+        int colon = userInfo.indexOf(':');
+        return colon < 0 ? decode(userInfo) : decode(userInfo.substring(0, colon));
+    }
+
+    private static String password(URI uri) {
+        String userInfo = uri.getUserInfo();
+        if (userInfo == null) {
             return null;
         }
-        int authorityStart = schemeEnd + 3;
-        int authorityEnd = jdbcUrl.indexOf('/', authorityStart);
-        if (authorityEnd < 0) {
-            authorityEnd = jdbcUrl.length();
-        }
-        String authority = jdbcUrl.substring(authorityStart, authorityEnd);
-        int at = authority.lastIndexOf('@');
-        if (at < 0) {
-            return null;
-        }
-        String rawUserInfo = authority.substring(0, at);
-        int colon = rawUserInfo.indexOf(':');
-        if (colon < 0) {
-            return new UserInfo(decode(rawUserInfo), "");
-        }
-        return new UserInfo(decode(rawUserInfo.substring(0, colon)), decode(rawUserInfo.substring(colon + 1)));
+        int colon = userInfo.indexOf(':');
+        return colon < 0 ? "" : decode(userInfo.substring(colon + 1));
     }
 
     private static String decode(String value) {
@@ -111,6 +126,6 @@ public class DataSourceUrlConfig {
         }
     }
 
-    private record UserInfo(String username, String password) {
+    record ParsedDatabaseUrl(String url, String username, String password) {
     }
 }
