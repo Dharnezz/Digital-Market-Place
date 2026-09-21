@@ -13,13 +13,6 @@ export default function ProductsToolbar({ activeStatus, onStatusChange, counts }
         </div>
 
         <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
-          <input
-            type="search"
-            disabled
-            placeholder="Search products — coming soon"
-            title="Search will be available in a later task"
-            className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-500 shadow-sm disabled:cursor-not-allowed disabled:bg-gray-100"
-          />
           <Link
             to="/seller/create-product"
             className="inline-flex shrink-0 items-center justify-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
