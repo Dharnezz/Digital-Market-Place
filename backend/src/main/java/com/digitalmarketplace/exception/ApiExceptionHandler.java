@@ -1,5 +1,7 @@
 package com.digitalmarketplace.exception;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -20,8 +22,11 @@ import java.util.Map;
 @RestControllerAdvice
 public class ApiExceptionHandler {
 
+    private static final Logger log = LoggerFactory.getLogger(ApiExceptionHandler.class);
+
     @ExceptionHandler(AuthenticationException.class)
     ProblemDetail handleAuthentication(AuthenticationException ex) {
+        log.warn("AuthenticationException: {}", ex.getMessage());
         ProblemDetail detail = ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, ex.getMessage());
         detail.setTitle("Unauthorized");
         return detail;
@@ -29,6 +34,7 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler(AccessDeniedException.class)
     ProblemDetail handleAccessDenied(AccessDeniedException ex) {
+        log.warn("AccessDeniedException: {}", ex.getMessage());
         ProblemDetail detail = ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, ex.getMessage());
         detail.setTitle("Forbidden");
         return detail;
@@ -36,6 +42,7 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler(ResourceNotFoundException.class)
     ProblemDetail handleNotFound(ResourceNotFoundException ex) {
+        log.warn("ResourceNotFoundException: {}", ex.getMessage());
         ProblemDetail detail = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
         detail.setTitle("Not Found");
         return detail;
@@ -43,6 +50,7 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler(ForbiddenException.class)
     ProblemDetail handleForbidden(ForbiddenException ex) {
+        log.warn("ForbiddenException: {}", ex.getMessage());
         ProblemDetail detail = ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, ex.getMessage());
         detail.setTitle("Forbidden");
         return detail;
@@ -50,6 +58,7 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler(BusinessException.class)
     ProblemDetail handleBusiness(BusinessException ex) {
+        log.warn("BusinessException: {}", ex.getMessage());
         ProblemDetail detail = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
         detail.setTitle("Bad Request");
         return detail;
@@ -82,6 +91,7 @@ public class ApiExceptionHandler {
             MissingRequestHeaderException.class,
             MethodArgumentTypeMismatchException.class})
     ProblemDetail handleBadRequest(Exception ex) {
+        log.warn("Bad request: {}", ex.getMessage());
         ProblemDetail detail = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
         detail.setTitle("Bad Request");
         return detail;
@@ -89,6 +99,7 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     ProblemDetail handleGeneric(Exception ex) {
+        log.error("Unhandled exception", ex);
         ProblemDetail detail = ProblemDetail.forStatusAndDetail(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred");
         detail.setTitle("Internal Server Error");
         return detail;

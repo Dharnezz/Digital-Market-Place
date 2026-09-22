@@ -16,6 +16,8 @@ import com.digitalmarketplace.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -28,6 +30,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/auth")
 @Tag(name = "Authentication", description = "Public registration, login, and password reset endpoints")
 public class AuthController {
+
+    private static final Logger log = LoggerFactory.getLogger(AuthController.class);
 
     private final UserService userService;
     private final JwtService jwtService;
@@ -63,11 +67,18 @@ public class AuthController {
     @Operation(summary = "Request a password reset OTP")
     @PostMapping("/forgot-password")
     public ResponseEntity<AuthMessageResponse> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        String email = request.email();
+        log.info("Forgot password request received for email: {}", email);
         try {
-            passwordResetOtpService.sendOtp(request.email());
+            passwordResetOtpService.sendOtp(email);
+            log.info("OTP sent successfully for email: {}", email);
         } catch (IllegalStateException e) {
+            log.warn("Rate limit exceeded for email: {}", email);
             return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
                     .body(new AuthMessageResponse(e.getMessage()));
+        } catch (Exception e) {
+            log.error("Forgot password failed for email: {}", email, e);
+            throw e;
         }
         // Always return generic message to prevent user enumeration
         return ResponseEntity.ok(new AuthMessageResponse(
@@ -77,24 +88,38 @@ public class AuthController {
     @Operation(summary = "Verify a password reset OTP")
     @PostMapping("/verify-otp")
     public ResponseEntity<AuthMessageResponse> verifyOtp(@Valid @RequestBody VerifyOtpRequest request) {
+        String email = request.email();
+        log.info("OTP verification request for email: {}", email);
         try {
-            passwordResetOtpService.verifyOtp(request.email(), request.otp());
+            passwordResetOtpService.verifyOtp(email, request.otp());
+            log.info("OTP verified successfully for email: {}", email);
             return ResponseEntity.ok(new AuthMessageResponse("OTP verified."));
         } catch (IllegalArgumentException e) {
+            log.warn("OTP verification failed for email: {} - {}", email, e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(new AuthMessageResponse(e.getMessage()));
+        } catch (Exception e) {
+            log.error("OTP verification failed for email: {}", email, e);
+            throw e;
         }
     }
 
     @Operation(summary = "Reset password using verified OTP")
     @PostMapping("/reset-password")
     public ResponseEntity<AuthMessageResponse> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        String email = request.email();
+        log.info("Password reset request for email: {}", email);
         try {
-            passwordResetOtpService.resetPassword(request.email(), request.otp(), request.newPassword());
+            passwordResetOtpService.resetPassword(email, request.otp(), request.newPassword());
+            log.info("Password reset successful for email: {}", email);
             return ResponseEntity.ok(new AuthMessageResponse("Password updated successfully."));
         } catch (IllegalArgumentException e) {
+            log.warn("Password reset failed for email: {} - {}", email, e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(new AuthMessageResponse(e.getMessage()));
+        } catch (Exception e) {
+            log.error("Password reset failed for email: {}", email, e);
+            throw e;
         }
     }
 }

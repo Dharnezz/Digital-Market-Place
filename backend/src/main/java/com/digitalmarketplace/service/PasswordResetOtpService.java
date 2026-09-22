@@ -4,6 +4,8 @@ import com.digitalmarketplace.entity.PasswordResetOtp;
 import com.digitalmarketplace.entity.User;
 import com.digitalmarketplace.repository.PasswordResetOtpRepository;
 import com.digitalmarketplace.repository.UserRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -12,6 +14,8 @@ import java.time.LocalDateTime;
 
 @Service
 public class PasswordResetOtpService {
+
+    private static final Logger log = LoggerFactory.getLogger(PasswordResetOtpService.class);
 
     private static final int OTP_LENGTH = 6;
     private static final int OTP_EXPIRY_MINUTES = 5;
@@ -35,26 +39,32 @@ public class PasswordResetOtpService {
 
     @Transactional
     public void sendOtp(String email) {
+        log.info("sendOtp started for email: {}", email);
         // Rate limit: prevent OTP spam - allow one OTP every 60 seconds
         User user = userRepository.findByEmail(email).orElse(null);
         if (user != null) {
             long recentOtps = otpRepository.countByUserAndCreatedAtAfter(user, LocalDateTime.now().minusSeconds(RATE_LIMIT_SECONDS));
             if (recentOtps > 0) {
+                log.warn("Rate limit exceeded for email: {}", email);
                 throw new IllegalStateException("Please wait before requesting another OTP");
             }
         }
 
         // Always return generic message to prevent user enumeration
         if (user == null) {
+            log.info("User not found for email (preventing enumeration): {}", email);
             return;
         }
 
+        log.info("User found for email: {}, invalidating existing OTPs", email);
         // Invalidate any existing unused OTPs for this user
         otpRepository.findByUserAndUsedFalseAndExpiresAtAfter(user, LocalDateTime.now())
                 .forEach(otp -> {
                     otp.setUsed(true);
                     otpRepository.save(otp);
                 });
+
+        log.info("Existing OTPs invalidated for user: {}", user.getEmail());
 
         // Generate new OTP
         String otp = generateOtp();
@@ -65,36 +75,50 @@ public class PasswordResetOtpService {
         resetOtp.setOtp(otp);
         resetOtp.setExpiresAt(expiresAt);
         otpRepository.save(resetOtp);
+        log.info("New OTP generated and saved for user: {}, expires at: {}", user.getEmail(), expiresAt);
 
         // Send email
+        log.info("Sending OTP email to: {}", user.getEmail());
         emailService.sendOtpEmail(user.getEmail(), user.getName(), otp);
+        log.info("OTP email sent successfully to: {}", user.getEmail());
     }
 
     @Transactional
     public void verifyOtp(String email, String otp) {
+        log.info("verifyOtp called for email: {}", email);
         User user = userRepository.findByEmail(email).orElse(null);
         if (user == null) {
+            log.warn("verifyOtp: User not found for email: {}", email);
             throw new IllegalArgumentException("Invalid OTP");
         }
 
         PasswordResetOtp resetOtp = otpRepository.findTopByUserOrderByCreatedAtDesc(user)
-                .orElseThrow(() -> new IllegalArgumentException("Invalid OTP"));
+                .orElseThrow(() -> {
+                    log.warn("verifyOtp: No OTP found for user: {}", email);
+                    return new IllegalArgumentException("Invalid OTP");
+                });
 
         if (resetOtp.isUsed()) {
+            log.warn("verifyOtp: OTP already used for email: {}", email);
             throw new IllegalArgumentException("OTP has already been used");
         }
 
         if (resetOtp.getExpiresAt().isBefore(LocalDateTime.now())) {
+            log.warn("verifyOtp: OTP expired for email: {}", email);
             throw new IllegalArgumentException("OTP has expired");
         }
 
         if (!resetOtp.getOtp().equals(otp)) {
+            log.warn("verifyOtp: Invalid OTP provided for email: {}", email);
             throw new IllegalArgumentException("Invalid OTP");
         }
+
+        log.info("verifyOtp: OTP verified successfully for email: {}", email);
     }
 
     @Transactional
     public void resetPassword(String email, String otp, String newPassword) {
+        log.info("resetPassword started for email: {}", email);
         verifyOtp(email, otp);
 
         User user = userRepository.findByEmail(email).orElseThrow(
@@ -106,9 +130,11 @@ public class PasswordResetOtpService {
         // Mark OTP as used
         resetOtp.setUsed(true);
         otpRepository.save(resetOtp);
+        log.info("OTP marked as used for email: {}", email);
 
         // Update password using UserService
         userService.updatePassword(user, newPassword);
+        log.info("Password reset successful for email: {}", email);
     }
 
     public String generateOtp() {
