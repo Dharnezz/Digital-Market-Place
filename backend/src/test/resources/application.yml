@@ -20,6 +20,11 @@ spring:
       hibernate:
         dialect: ${JPA_DIALECT:org.hibernate.dialect.H2Dialect}
 
+  # Disable email sending in tests
+  mail:
+    host: localhost
+    port: 25
+
 server:
   port: ${PORT:8080}
 
@@ -29,6 +34,7 @@ app:
     expiration-ms: ${JWT_EXPIRATION_MS:86400000}
   demo-data:
     enabled: false
+  name: Digital Marketplace Test
 
 springdoc:
   swagger-ui:

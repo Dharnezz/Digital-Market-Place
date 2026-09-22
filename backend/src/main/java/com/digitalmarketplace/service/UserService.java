@@ -60,4 +60,10 @@ public class UserService {
         user.setRole(role == null ? UserRole.USER : role);
         return userRepository.save(user);
     }
+
+    @Transactional
+    public void updatePassword(User user, String newRawPassword) {
+        user.setPasswordHash(passwordEncoder.encode(newRawPassword));
+        userRepository.save(user);
+    }
 }

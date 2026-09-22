@@ -3,11 +3,12 @@ package com.digitalmarketplace.controller;
 import com.digitalmarketplace.entity.User;
 import com.digitalmarketplace.entity.UserRole;
 import com.digitalmarketplace.security.JwtService;
+import com.digitalmarketplace.service.PasswordResetOtpService;
 import com.digitalmarketplace.service.UserService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -23,7 +24,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(AuthController.class)
+@SpringBootTest
 @AutoConfigureMockMvc(addFilters = false)
 class AuthControllerTest {
 
@@ -35,6 +36,9 @@ class AuthControllerTest {
 
     @MockitoBean
     private JwtService jwtService;
+
+    @MockitoBean
+    private PasswordResetOtpService passwordResetOtpService;
 
     private User user(long id, String name, String email, UserRole role) {
         User user = new User();

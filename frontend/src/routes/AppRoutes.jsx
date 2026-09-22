@@ -5,6 +5,9 @@ import RoleRoute from '../components/auth/RoleRoute'
 import Home from '../pages/Home'
 import Login from '../pages/Login'
 import Register from '../pages/Register'
+import ForgotPasswordPage from '../pages/ForgotPasswordPage'
+import VerifyOtpPage from '../pages/VerifyOtpPage'
+import ResetPasswordPage from '../pages/ResetPasswordPage'
 import Products from '../pages/Products'
 import ProductDetails from '../pages/ProductDetails'
 import NotFound from '../pages/NotFound'
@@ -31,6 +34,9 @@ export default function AppRoutes() {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/verify-otp" element={<VerifyOtpPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route
           path="/products"
           element={
